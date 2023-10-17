@@ -6,6 +6,7 @@
         <style>
             body { margin: 0; }
         </style>
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous"> 
     </head>
     
 	
@@ -19,6 +20,7 @@
 	
     <body>
         <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
         <script type="importmap">
             {
               "imports": {
@@ -27,16 +29,59 @@
               }
             }
           </script>
+		
+		
+
+		<div class="modal fade in" id="instructions">
+		<div class="modal-dialog">
+			<div class="modal-content">
+			<div class="modal-header">
+				<h1 class="modal-title fs-5" id="instructionsLabel">3D Snake</h1>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				Use the left and right arrow keys to control the snake. Rotate the cube by clicking and dragging it.
+			</div>
+			
+			</div>
+		</div>
+		</div>
+
+
+		<div class="modal fade in" id="scorePopup">
+			<div class="modal-dialog">
+				<div class="modal-content">
+				<div class="modal-header">
+					<h1 class="modal-title fs-5" id="scorePopupLabel">Game Over!</h1>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					You got a score of <span id="score"></span>! 
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" onClick="window.location.reload();">Play Again</button>
+				  </div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			//https://stackoverflow.com/questions/10233550/launch-bootstrap-modal-on-page-load
+			var instructions = new bootstrap.Modal(document.getElementById('instructions'), {});
+			instructions.toggle();
+		</script>
+		
         <script type="module">
             import * as THREE from 'three';
             import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 			import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 			import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 			import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-
+			// for 3d text
+			import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'; 
+			import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+		
 			
-			//import { FontLoader } from 'https://threejs.org/examples/jsm/loaders/FontLoader.js';		
-			//import { TextGeometry } from 'https://threejs.org/examples/jsm/geometries/TextGeometry.js'; 
 
 
 
@@ -79,13 +124,26 @@
 			var foodEaten = 0;
 			var gameOver = 0;
 			var lastMovement = 0;
-			
+			var textMesh1; //textMesh1 
 			
 			var speed = 500; //global
 			var max_speed = 100;
+			//font materials
+			const fontMaterials = [
+					new THREE.MeshPhongMaterial( { color: 0xffffff, flatShading: true } ), // front
+					new THREE.MeshPhongMaterial( { color: 0xffffff } ) // side
+			];
 			
-//
+//			
+
 			
+			
+			
+			
+			//
+		
+		
+
 //wireframe cube
 			// Create a clear cube
 			const geometry1 = new THREE.BoxGeometry(1, 1, 1);
@@ -196,6 +254,8 @@
             scene.add(targetCube);
 
             
+
+
 			var prevside = 0;
 
             camera.position.z = 5;
@@ -219,16 +279,37 @@
 			
 			setInt() //moved interval to function at bottom
 			
-			
+			scoreDisplay();
 //
             document.addEventListener("keydown", onKeyDown, false);
 			var keyPressed = 0;
+			var hasTurned = 0;
             function onKeyDown(event){
-				if(event.which > 36 && event.which < 41){
-					if(lastMovement != event.which + 2 && lastMovement != event.which - 2){
-						keyPressed = event.which;
-						prevside = side;
+				if(!hasTurned){
+					if(keyPressed==0){
+						keyPressed = 38;
 					}
+					if(event.which > 36 && event.which < 41){
+						if(event.which == 37){
+							keyPressed--;
+							if(keyPressed<37){
+								keyPressed = 40;
+							}
+							prevside = side;
+						}
+						if(event.which == 39){
+							keyPressed++;
+							if(keyPressed>40){
+								keyPressed = 37;
+							}
+							prevside = side;
+						}
+						// if(lastMovement != event.which + 2 && lastMovement != event.which - 2){
+						// 	keyPressed = event.which;
+						// 	prevside = side;
+						// }
+					}
+					hasTurned = 1;
 				}
             }
 			
@@ -249,6 +330,7 @@
 				foodEaten = 1;
 				score += 1;
 				console.log("score: " + score);
+
 				spawncube(targetCube);
 				audioLoader.load( 'ding.wav', function( buffer ) {
 					sound.setBuffer( buffer );
@@ -256,6 +338,7 @@
 					sound.setVolume( 1 );
 					sound.play();
 				});
+				scoreDisplay();
 			}
 			for(let i = 1; i < snakeArray.length; i++){
 				if((cube.position.x == snakeArray[i].position.x && cube.position.y == snakeArray[i].position.y && cube.position.z == snakeArray[i].position.z) ){
@@ -271,12 +354,58 @@
 					
 					
 					//send text
-					window.alert("Game over! Final Score: " + score);
-
+					//window.alert("Game over! Final Score: " + score);
+					var scorePopup = new bootstrap.Modal(document.getElementById('scorePopup'), {});
+					document.getElementById("score").innerHTML = score; //set the score in the popup
+					scorePopup.toggle();
 
 				} //end game over func
 			}
 		}
+
+		function scoreDisplay(){
+			//font code
+				//load font https://threejs.org/docs/index.html#examples/en/loaders/FontLoader, https://threejs.org/docs/index.html#examples/en/geometries/TextGeometry, https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_text.html 
+				if(score > 0){
+					scene.remove(textMesh1); //only remove after it is already there
+				}
+				const loader = new FontLoader();
+				loader.load( 'fonts/helvetiker_regular.typeface.json', function ( font ) {
+
+					const textGeometry = new TextGeometry( ''+score, {
+						font: font,
+						size: 80,
+						height: 5,
+						curveSegments: 12
+					} );
+				//end load font
+				textMesh1 = new THREE.Mesh( textGeometry, fontMaterials );
+				textMesh1.position.x = 0.0;
+				textMesh1.position.y = 0.0;
+				textMesh1.position.z = 0.0;
+				textMesh1.scale.multiplyScalar(0.002);
+
+
+				const textMeshGeometry = new THREE.EdgesGeometry(textGeometry);
+				const textMeshOutlineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+				const textMeshOutline = new THREE.LineSegments(textMeshGeometry, textMeshOutlineMaterial);
+				textMesh1.scale.multiplyScalar(1.1); //needed
+			
+				//following 3 lines set position to center instead of corner at center
+				const boundingBox = new THREE.Box3().setFromObject(textMesh1);
+				const center = boundingBox.getCenter(new THREE.Vector3());
+				textMesh1.position.sub(center);
+			
+				
+			
+				textMesh1.add(textMeshOutline); // Add the outline as a child of the cube
+			
+			
+	
+				scene.add(textMesh1);
+				});
+		}
+
 		function move(keyPressed)
 		{
 			if(foodEaten){
@@ -294,6 +423,7 @@
 					snakeArray[i].position.y = snakeArray[i-1].position.y;
 					snakeArray[i].position.z = snakeArray[i-1].position.z;
 				}
+				
 			}
 		
 			if ( side == 0 )
@@ -737,6 +867,7 @@
 			// console.log("side   " + side);
 			// console.log("x "+ cube.position.x+ "   y ", cube.position.y+ "   z ", cube.position.z);
 			lastMovement = keyPressed;
+			hasTurned = 0;
 			
 		}
 	
@@ -822,6 +953,7 @@
 						//console.log("changed to f");
 						keyPressed = 38;
 					}
+					
 				}
 			
 				
@@ -842,11 +974,23 @@
                 //    console.log('hi');
                 //}
 				
-				
-				
-				
+			
                 controls.update();
                 //renderer.render( scene, camera );
+				//
+				
+			
+				
+				//
+				const boundingBox = new THREE.Box3().setFromObject(textMesh1);
+				const center = boundingBox.getCenter(new THREE.Vector3());
+				
+				textMesh1.position.sub(center);
+				
+				//console.log(center.x.toFixed(3), center.y.toFixed(3), center.z.toFixed(3) );
+				
+				textMesh1.lookAt(camera.position); //make the score always face the camera
+	
 				composer.render();
             }
 
